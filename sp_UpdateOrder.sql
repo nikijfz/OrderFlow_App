@@ -7,7 +7,7 @@ BEGIN
 
     BEGIN TRY
         DECLARE @GuidKey UNIQUEIDENTIFIER = JSON_VALUE(@JsonData, '$.GuidKey');
-        DECLARE @BuyerId UNIQUEIDENTIFIER = JSON_VALUE(@JsonData, '$.BuyerId');
+        DECLARE @BuyerId UNIQUEIDENTIFIER = JSON_VALUE(@JsonData, '$.BuyerId'); 
         DECLARE @TotalAmount DECIMAL(18,2) = JSON_VALUE(@JsonData, '$.TotalAmount');
         DECLARE @OrderDate DATETIME2 = JSON_VALUE(@JsonData, '$.OrderDate');
         DECLARE @HeaderId UNIQUEIDENTIFIER;
@@ -22,14 +22,12 @@ BEGIN
             RETURN;
         END
 
-        -- Update Header
         UPDATE Sales.OrderHeaders
         SET BuyerId = @BuyerId,
             TotalAmount = @TotalAmount,
             OrderDate = ISNULL(@OrderDate, OrderDate)
         WHERE Id = @HeaderId;
 
-        -- Update, Insert or Delete Details
         MERGE Sales.OrderDetails AS target
         USING (
             SELECT 
@@ -58,7 +56,7 @@ BEGIN
             VALUES (NEWID(), source.GuidKey, @HeaderId, source.ProductId, source.UnitPrice, source.Amount, 0)
 
         WHEN NOT MATCHED BY SOURCE AND target.OrderHeaderId = @HeaderId THEN
-            DELETE; 
+            DELETE;
 
         COMMIT TRANSACTION;
     END TRY
