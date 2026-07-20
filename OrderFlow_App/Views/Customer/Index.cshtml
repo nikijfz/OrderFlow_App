@@ -1,0 +1,47 @@
+﻿@{
+    ViewBag.Title = "Customer Management";
+}
+
+<div class="container mt-4">
+    <h3 class="fw-bold mb-4">Customer Management</h3>
+
+    <div class="card shadow-sm p-4 mb-4">
+        <input type="hidden" id="selectedCustomerId" />
+        <div class="row g-3">
+            <div class="col-md-3">
+                <input type="text" id="firstNameInput" class="form-control" placeholder="First Name">
+            </div>
+            <div class="col-md-3">
+                <input type="text" id="lastNameInput" class="form-control" placeholder="Last Name">
+            </div>
+            <div class="col-md-3">
+                <input type="tel" id="phoneInput" maxlength="11" class="form-control" placeholder="09xxxxxxxxx">
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button class="btn btn-success" id="saveBtn">Save</button>
+                <button class="btn btn-primary" id="updateBtn">Edit</button>
+                <button class="btn btn-danger" id="removeBtn">Delete</button>
+                <button class="btn btn-secondary" id="refreshBtn">Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-bold">Registered Customers</div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Phone</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="customerContainer"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="~/js/Customer.js"></script>

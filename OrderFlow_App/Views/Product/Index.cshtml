@@ -1,0 +1,48 @@
+﻿@{
+    ViewBag.Title = "Product";
+}
+
+<div class="container mt-4">
+    <h3 class="fw-bold mb-4">Product Management</h3>
+
+    <div class="card shadow-sm p-4 mb-4">
+        <input type="hidden" id="selectedProductId" />
+
+        <div class="row g-3">
+            <div class="col-md-3">
+                <input type="text" id="titleInput" class="form-control" placeholder="Title">
+            </div>
+            <div class="col-md-3">
+                <input type="text" id="recordDescriptionInput" class="form-control" placeholder="Description">
+            </div>
+            <div class="col-md-2">
+                <input type="number" id="unitPriceInput" class="form-control" placeholder="Price">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button class="btn btn-success" id="saveBtn">Save</button>
+                <button class="btn btn-primary" id="updateBtn">Edit</button>
+                <button class="btn btn-danger" id="removeBtn">Delete</button>
+                <button class="btn btn-secondary" id="refreshBtn">Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-bold">Products List</div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Price</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="productContainer"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="~/js/Product.js"></script>

@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/Database/">
+    <File Path="sp_DeleteOrder.sql" />
+    <File Path="sp_InsertOrder.sql" />
+    <File Path="sp_UpdateOrder.sql" />
+  </Folder>
+  <Project Path="OrderFlow_App/OrderFlow_App.csproj" />
+</Solution>
