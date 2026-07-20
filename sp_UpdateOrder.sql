@@ -12,7 +12,6 @@ BEGIN
         DECLARE @OrderDate DATETIME2 = JSON_VALUE(@JsonData, '$.OrderDate');
         DECLARE @HeaderId UNIQUEIDENTIFIER;
 
-        -- Get Header Id
         SELECT @HeaderId = Id 
         FROM Sales.OrderHeaders 
         WHERE GuidKey = @GuidKey AND IsDeleted = 0;
@@ -23,14 +22,14 @@ BEGIN
             RETURN;
         END
 
-        -- Update Header (including BuyerId)
+        -- Update Header
         UPDATE Sales.OrderHeaders
         SET BuyerId = @BuyerId,
             TotalAmount = @TotalAmount,
             OrderDate = ISNULL(@OrderDate, OrderDate)
         WHERE Id = @HeaderId;
 
-        -- Update / Insert Details using MERGE
+        -- Update, Insert or Delete Details
         MERGE Sales.OrderDetails AS target
         USING (
             SELECT 
@@ -46,22 +45,25 @@ BEGIN
                 Amount DECIMAL(18,2) '$.Amount'
             ) AS d
         ) AS source
-        ON (target.GuidKey = source.GuidKey AND target.OrderHeaderId = @HeaderId)
+        ON target.GuidKey = source.GuidKey AND target.OrderHeaderId = @HeaderId
 
         WHEN MATCHED THEN
             UPDATE SET 
                 target.UnitPrice = source.UnitPrice, 
-                target.Amount = source.Amount
+                target.Amount = source.Amount,
+                target.IsDeleted = 0 
 
         WHEN NOT MATCHED THEN
             INSERT (Id, GuidKey, OrderHeaderId, ProductId, UnitPrice, Amount, IsDeleted)
-            VALUES (NEWID(), source.GuidKey, @HeaderId, source.ProductId, source.UnitPrice, source.Amount, 0);
+            VALUES (NEWID(), source.GuidKey, @HeaderId, source.ProductId, source.UnitPrice, source.Amount, 0)
+
+        WHEN NOT MATCHED BY SOURCE AND target.OrderHeaderId = @HeaderId THEN
+            DELETE; 
 
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
-        IF @@TRANCOUNT > 0 
-            ROLLBACK TRANSACTION;
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
         THROW;
     END CATCH
 END

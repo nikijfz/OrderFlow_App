@@ -51,27 +51,19 @@ namespace OrderFlow_App.ApplicationServices.Services
                 }
             }
         }
-        #endregion
+        #endregion
 
-        #region [- PutAsync() -]
-        public async Task<IResponse<PutOrderDto>> PutAsync(PutOrderDto putOrderDto)
+        #region [- PutAsync() -]
+        public async Task<IResponse<PutOrderDto>> PutAsync(PutOrderDto putOrderDto)
         {
-            if (putOrderDto == null)
+            if (putOrderDto == null || putOrderDto.Details == null || !putOrderDto.Details.Any())
             {
                 return new Response<PutOrderDto>(false, HttpStatusCode.BadRequest, ResponseMessages.Error, null);
             }
             else
             {
-                var orderHeader = new OrderHeader()
-                {
-                    GuidKey = putOrderDto.GuidKey,
-                    SellerId = putOrderDto.SellerId,
-                    BuyerId = putOrderDto.BuyerId,
-                    OrderDate = putOrderDto.OrderDate,
-                    TotalAmount = putOrderDto.TotalAmount
-                };
-
-                var result = await _orderRepository.UpdateAsync(orderHeader);
+                var orderJson = JsonSerializer.Serialize(putOrderDto);
+                var result = await _orderRepository.UpdateOrderJsonAsync(orderJson);
 
                 if (!result.IsSuccessful)
                 {

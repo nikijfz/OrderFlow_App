@@ -8,15 +8,27 @@ const api = {
                 headers: { "Content-Type": "application/json", ...options.headers },
                 ...options
             });
+
             if (options.method === "DELETE") return true;
+
             if (!response.ok) {
                 const err = await response.text();
                 throw new Error(err);
             }
+
             return await response.json();
-        } catch (error) { console.error("API Error:", error); throw error; }
+        } catch (error) {
+            console.error("API Error:", error);
+            throw error;
+        }
     },
-    get: (url) => api.request(url, { method: "GET" }),
+
+    get: (url) => {
+        const separator = url.includes('?') ? '&' : '?';
+        const antiCacheUrl = `${url}${separator}_t=${new Date().getTime()}`;
+        return api.request(antiCacheUrl, { method: "GET" });
+    },
+
     post: (url, body) => api.request(url, { method: "POST", body: JSON.stringify(body) }),
     delete: (url, body) => api.request(url, {
         method: "DELETE",
@@ -24,18 +36,24 @@ const api = {
     }),
 };
 
+// ============================================
+// UTILITIES
+// ============================================
 const generateGuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    let r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    let r = Math.random() * 16 | 0;
+    let v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
 });
 
-// const baseUrl = "http:localhost:5031";
+// ============================================
+// GLOBAL VARIABLES
+// ============================================
 const baseUrl = window.location.origin;
 let basket = [];
 let currentEditingOrderGuid = null;
 
 // ============================================
-// ۱. مدیریت و لود کاتالوگ محصولات
+// PRODUCT CATALOG
 // ============================================
 const loadCatalog = async () => {
     try {
@@ -58,7 +76,10 @@ const loadCatalog = async () => {
                     <input type="number" id="qty_${id}" value="1" min="1" class="form-control form-control-sm">
                 </td>
                 <td>
-                    <button type="button" class="btn btn-sm btn-primary"  onclick="addToBasket('${id}', '${title}', ${price})"> ${basket.some(item => item.productId === id) ? 'Increase Qty' : 'Add'} </button>
+                    <button type="button" class="btn btn-sm btn-primary" 
+                            onclick="addToBasket('${id}', '${title}', ${price})">
+                        Add
+                    </button>
                 </td>
             </tr>`;
         }).join('');
@@ -67,12 +88,8 @@ const loadCatalog = async () => {
     }
 };
 
-// <td>
-//     <button type="button" class="btn btn-sm btn-primary" onclick="addToBasket('${id}', '${title}', ${price})">Add</button>
-// </td>
-
 // ============================================
-// ۲. مدیریت و انتخاب خریدار
+// BUYER SELECTION
 // ============================================
 const initBuyerSelection = () => {
     const selectBuyerBtn = document.querySelector("#selectBuyerBtn");
@@ -96,7 +113,7 @@ const initBuyerSelection = () => {
                     <td>${firstName} ${lastName}</td>
                     <td>${phone}</td>
                     <td>
-                        <button type="button" class="btn btn-sm btn-outline-success" 
+                        <button type="button" class="btn btn-sm btn-outline-success"
                             onclick="setBuyer('${id}', '${firstName}', '${lastName}', '${phone}')">
                             Select
                         </button>
@@ -118,18 +135,16 @@ window.setBuyer = (id, firstName, lastName, phone) => {
 };
 
 // ============================================
-// ۳. لاجیک سبد خرید فاکتور (فقط قیمت قابل ویرایش است)
+// BASKET MANAGEMENT (Single product per item)
 // ============================================
 window.addToBasket = (id, title, price) => {
-    // Check if product already exists in basket
     const existingItem = basket.find(item => item.productId === id);
 
     if (existingItem) {
         alert(`"${title}" is already in the basket. You cannot add it again.`);
-        return; // Do nothing
+        return;
     }
 
-    // Add new item (only once)
     const qtyInput = document.querySelector(`#qty_${id}`);
     const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
 
@@ -141,10 +156,8 @@ window.addToBasket = (id, title, price) => {
     });
 
     alert(`"${title}" has been added to the basket successfully.`);
-
     renderBasket();
 };
-
 
 const renderBasket = () => {
     const container = document.querySelector("#basketContainer");
@@ -159,9 +172,9 @@ const renderBasket = () => {
         return `
         <tr>
             <td>${item.title}</td>
-            <td>${item.amount}</td> <!-- تعداد غیرقابل تغییر در سبد -->
+            <td>${item.amount}</td>
             <td>
-                <input type="number" class="form-control form-control-sm" value="${item.unitPrice}" 
+                <input type="number" class="form-control form-control-sm" value="${item.unitPrice}"
                     onchange="updateBasketPrice(${index}, this.value)">
             </td>
             <td class="fw-bold">${itemTotal}</td>
@@ -185,7 +198,7 @@ window.removeFromBasket = (index) => {
 };
 
 // ============================================
-// ۴. ثبت نهایی اطلاعات فاکتور (اصلاح شده و یکپارچه)
+// ORDER SUBMISSION (Create & Update)
 // ============================================
 const initOrderSubmission = () => {
     const submitBtn = document.querySelector("#submitOrderBtn");
@@ -203,7 +216,7 @@ const initOrderSubmission = () => {
             OrderDate: new Date().toISOString(),
             TotalAmount: parseFloat(document.querySelector("#grandTotal").innerText),
             Details: basket.map(i => ({
-                GuidKey: generateGuid(),
+                GuidKey: i.guidKey || generateGuid(),
                 ProductId: i.productId,
                 ProductTitle: i.title,
                 UnitPrice: parseFloat(i.unitPrice),
@@ -212,10 +225,7 @@ const initOrderSubmission = () => {
         };
 
         try {
-            const url = currentEditingOrderGuid
-                ? `${baseUrl}/Order/Put`
-                : `${baseUrl}/Order/Post`;
-
+            const url = currentEditingOrderGuid ? `${baseUrl}/Order/Put` : `${baseUrl}/Order/Post`;
             const method = currentEditingOrderGuid ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
@@ -231,12 +241,10 @@ const initOrderSubmission = () => {
 
             alert(currentEditingOrderGuid ? "Order updated successfully!" : "Order submitted successfully!");
 
-            resetToNewOrderMode();
-
             basket = [];
             renderBasket();
+            resetToNewOrderMode();
             loadOrders();
-
         } catch (error) {
             console.error(error);
             alert("Error: " + error.message);
@@ -244,9 +252,8 @@ const initOrderSubmission = () => {
     };
 };
 
-
 // ============================================
-// ویرایش سفارش
+// EDIT ORDER
 // ============================================
 window.handleEdit = async (guidKey) => {
     currentEditingOrderGuid = guidKey;
@@ -263,30 +270,29 @@ window.handleEdit = async (guidKey) => {
         document.querySelector("#buyerLastName").value = order.buyerName ? order.buyerName.split(' ').slice(1).join(' ') : "";
         document.querySelector("#buyerPhone").value = order.buyerPhone || "";
 
-        // Fill basket
+        // Fill basket - IMPORTANT: Keep original detail GuidKey for update
         basket = order.details.map(d => ({
             productId: d.productId,
             title: d.productTitle || "Unknown Product",
             unitPrice: d.unitPrice,
-            amount: d.amount
+            amount: d.amount,
+            guidKey: d.guidKey || generateGuid()
         }));
 
         renderBasket();
 
-        // Change button to Update mode
+        // Switch button to Update mode
         const submitBtn = document.querySelector("#submitOrderBtn");
         submitBtn.textContent = "Update Order";
         submitBtn.classList.remove("btn-success");
         submitBtn.classList.add("btn-warning");
 
         alert("Order loaded for editing. Make your changes and click Update Order.");
-
     } catch (err) {
         console.error(err);
         alert("Error loading order for edit.");
     }
 };
-
 
 const resetToNewOrderMode = () => {
     currentEditingOrderGuid = null;
@@ -296,19 +302,17 @@ const resetToNewOrderMode = () => {
     submitBtn.classList.add("btn-success");
 };
 
-
 // ============================================
-// ۵. مدیریت لیست اسناد
+// ORDERS LIST & ACTIONS
 // ============================================
 const loadOrders = async () => {
     try {
         let orders = await api.get(`${baseUrl}/Order/GetAll`);
-        if (orders.value) orders = orders.value;   // handle response wrapper
+        if (orders.value) orders = orders.value;
 
         const tbody = document.querySelector("#ordersListTable");
         if (!tbody) return;
 
-        // Remove duplicates just in case
         const uniqueOrders = orders.filter((order, index, self) =>
             index === self.findIndex(o => o.guidKey === order.guidKey)
         );
@@ -316,18 +320,12 @@ const loadOrders = async () => {
         tbody.innerHTML = uniqueOrders.map(o => `
             <tr>
                 <td>${new Date(o.orderDate).toLocaleDateString('en-US')}</td>
-                <td>${o.buyerName || "N/A"}</td> 
+                <td>${o.buyerName || "N/A"}</td>
                 <td class="fw-bold">${o.totalAmount.toLocaleString()}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary me-1" onclick="handleEdit('${o.guidKey}')">
-                        Edit
-                    </button>
-                    <button class="btn btn-sm btn-info me-1" onclick="handleDetail('${o.guidKey}')">
-                        Details
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="handleDelete('${o.guidKey}')">
-                        Delete
-                    </button>
+                    <button class="btn btn-sm btn-primary me-1" onclick="handleEdit('${o.guidKey}')">Edit</button>
+                    <button class="btn btn-sm btn-info me-1" onclick="handleDetail('${o.guidKey}')">Details</button>
+                    <button class="btn btn-sm btn-danger" onclick="handleDelete('${o.guidKey}')">Delete</button>
                 </td>
             </tr>
         `).join('');
@@ -336,25 +334,6 @@ const loadOrders = async () => {
     }
 };
 
-
-function renderOrders(orders) {
-    const tbody = document.querySelector("#ordersTableBody");
-    if (!tbody) return;
-
-    tbody.innerHTML = orders.map(o => `
-        <tr>
-            <td>${new Date(o.orderDate).toLocaleDateString()}</td> 
-            <td>${o.buyerName || "N/A"}</td>
-            <td>${o.totalAmount.toLocaleString()}</td>
-            <td>
-                <button onclick="handleDetail('${o.guidKey}')">Detail</button>
-                <button onclick="handleDelete('${o.guidKey}')">Delete</button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// توابع دکمه‌ها
 window.handleDetail = async (guidKey) => {
     try {
         const response = await api.get(`${baseUrl}/Order/GetById?GuidKey=${guidKey}`);
@@ -437,7 +416,6 @@ window.handleDetail = async (guidKey) => {
     }
 };
 
-
 window.handleDelete = async (guidKey) => {
     if (confirm("Are you sure you want to delete this order?")) {
         try {
@@ -450,22 +428,8 @@ window.handleDelete = async (guidKey) => {
     }
 };
 
-window.deleteOrder = async (guidKey) => {
-    if (confirm("آیا از حذف این سفارش مطمئن هستید؟")) {
-        const payload = { GuidKey: guidKey };
-        try {
-            await fetch(`${baseUrl}/Order/Delete`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            loadOrders();
-        } catch (err) { alert("Error: " + err.message); }
-    }
-};
-
 // ============================================
-// INITIALIZATION (فقط یکبار فراخوانی شود)
+// INITIALIZATION
 // ============================================
 window.addEventListener("DOMContentLoaded", () => {
     loadCatalog();

@@ -43,20 +43,18 @@ namespace OrderFlow_App.Models.Services.Repositories
         #endregion
 
         #region [- UpdateAsync() -]
-        public async Task<IResponse<OrderHeader>> UpdateAsync(OrderHeader orderHeader)
+        public async Task<IResponse<bool>> UpdateOrderJsonAsync(string orderJson)
         {
             try
             {
-                var jsonString = SerializeOrder(orderHeader);
-                var jsonParam = new SqlParameter("@JsonData", jsonString);
+                var parameter = new Microsoft.Data.SqlClient.SqlParameter("@JsonData", orderJson);
+                await _context.Database.ExecuteSqlRawAsync("EXEC dbo.Sp_UpdateOrder @JsonData", parameter);
 
-                await _context.Database.ExecuteSqlRawAsync("EXEC dbo.Sp_UpdateOrder @JsonData", jsonParam);
-
-                return new Response<OrderHeader>(true, HttpStatusCode.OK, ResponseMessages.SuccessfullOperation, orderHeader);
+                return new Response<bool>(true, HttpStatusCode.OK, ResponseMessages.SuccessfullOperation, true);
             }
             catch (Exception ex)
             {
-                return new Response<OrderHeader>(false, HttpStatusCode.InternalServerError, ResponseMessages.Error, null);
+                return new Response<bool>(false, HttpStatusCode.InternalServerError, ResponseMessages.Error, false);
             }
         }
         #endregion
@@ -114,7 +112,6 @@ namespace OrderFlow_App.Models.Services.Repositories
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in SelectByIdAsync: {ex.Message}");
                 return new Response<OrderHeader>(false, HttpStatusCode.InternalServerError, ResponseMessages.Error, null);
             }
         }

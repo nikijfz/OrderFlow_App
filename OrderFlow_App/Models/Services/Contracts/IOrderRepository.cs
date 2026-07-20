@@ -6,7 +6,7 @@ namespace OrderFlow_App.Models.Services.Contracts
     public interface IOrderRepository 
     {
         Task<IResponse<bool>> InsertOrderJsonAsync(string orderJson);
-        Task<IResponse<OrderHeader>> UpdateAsync(OrderHeader orderHeader);
+        Task<IResponse<bool>> UpdateOrderJsonAsync(string orderJson);
         Task<IResponse<OrderHeader>> DeleteAsync(OrderHeader orderHeader);
         Task<IResponse<IEnumerable<OrderHeader>>> SelectAllAsync();
         Task<IResponse<OrderHeader>> SelectByIdAsync(OrderHeader orderHeader);
